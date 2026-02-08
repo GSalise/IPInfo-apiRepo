@@ -7,11 +7,13 @@ import com.georgesalise.apiRepo.api.model.User;
 import com.georgesalise.apiRepo.api.repository.IIPInfoRepository;
 import com.georgesalise.apiRepo.api.repository.IUserRepository;
 import com.georgesalise.apiRepo.api.service.userhistory.IUserHistoryService;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -61,23 +63,12 @@ public class IPInfoServiceImpl implements IIPInfoService{
         return converToDTO(saved_ipInfo);
     }
 
-
-    @Override
-    public IPInfoDTO updateIpInfo(Long id, IPInfoDTO ipInfoDTO) {
-        return null;
-    }
-
     @Override
     public void deleteIPInfo(Long id) {
         if (id == null){
             throw  new IllegalArgumentException("IPInfo id cannot be null");
         }
         iipInfoRepository.deleteById(id);
-    }
-
-    @Override
-    public void setIsCurrentIP(Long userId, Long ipadd_id) {
-
     }
 
     // Method is used for getting the user's current IP information
@@ -105,7 +96,9 @@ public class IPInfoServiceImpl implements IIPInfoService{
         IPInfoDTO result;
 
         // Check if the IP already exists in the db
+        // If there are any changes to the old ipinfo, update it
         if(existingIPInfo.isPresent()){
+            updateIpInfo(existingIPInfo.get(), apiResponse);
             result = converToDTO(existingIPInfo.get());
         }else{
             result = createIPInfo(apiResponse);
@@ -146,6 +139,7 @@ public class IPInfoServiceImpl implements IIPInfoService{
         IPInfoDTO result;
 
         if(existingIPInfo.isPresent()){
+            updateIpInfo(existingIPInfo.get(), apiResponse);
             result = converToDTO(existingIPInfo.get());
         }else{
             result = createIPInfo(apiResponse);
@@ -160,6 +154,37 @@ public class IPInfoServiceImpl implements IIPInfoService{
         return result;
     }
 
+
+    @Override
+    @Transactional
+    public void updateIpInfo(IPInfo oldIPInfo, IPGeoAPIDTO ipInfoFromGeoAPI) {
+        IPInfo newIPInfo = converToEntity(ipInfoFromGeoAPI);
+
+        if(!Objects.equals(oldIPInfo.getCity(), newIPInfo.getCity())){
+            oldIPInfo.setCity(newIPInfo.getCity());
+        }
+        if(!Objects.equals(oldIPInfo.getRegion(), newIPInfo.getRegion())){
+            oldIPInfo.setRegion(newIPInfo.getRegion());
+        }
+
+        if(!Objects.equals(oldIPInfo.getCountry(), newIPInfo.getCountry())){
+            oldIPInfo.setCountry(newIPInfo.getCountry());
+        }
+
+        if(!Objects.equals(oldIPInfo.getPostal(), newIPInfo.getPostal())){
+            oldIPInfo.setPostal(newIPInfo.getPostal());
+        }
+
+        if(!Objects.equals(oldIPInfo.getLatitude(), newIPInfo.getLatitude())){
+            oldIPInfo.setLatitude(newIPInfo.getLatitude());
+        }
+
+        if(!Objects.equals(oldIPInfo.getLongitude(), newIPInfo.getLongitude())){
+            oldIPInfo.setLongitude(newIPInfo.getLongitude());
+        }
+
+    }
+
     private IPInfoDTO converToDTO(IPInfo ipInfo){
         return new IPInfoDTO(
                 ipInfo.getIpInfoId(),
@@ -170,10 +195,10 @@ public class IPInfoServiceImpl implements IIPInfoService{
                 ipInfo.getPostal(),
                 ipInfo.getLatitude(),
                 ipInfo.getLongitude(),
-                ipInfo.getIsCurrentIp(),
                 ipInfo.getCreatedAt()
         );
     }
+
 
     private IPInfo converToEntity(IPInfoDTO ipInfoDTO){
         IPInfo ipInfo = new IPInfo();
@@ -184,7 +209,6 @@ public class IPInfoServiceImpl implements IIPInfoService{
         ipInfo.setPostal(ipInfoDTO.postal());
         ipInfo.setLatitude(ipInfoDTO.latitude());
         ipInfo.setLongitude(ipInfoDTO.longitude());
-        ipInfo.setIsCurrentIp(ipInfoDTO.isCurrentIp());
         ipInfo.setCreatedAt(LocalDateTime.now());
         return ipInfo;
     }
@@ -198,7 +222,6 @@ public class IPInfoServiceImpl implements IIPInfoService{
         ipInfo.setPostal(ipGeoAPIDTO.postal());
         ipInfo.setLatitude(ipGeoAPIDTO.getLatitude());
         ipInfo.setLongitude(ipGeoAPIDTO.getLongitude());
-        ipInfo.setIsCurrentIp(true);
         ipInfo.setCreatedAt(LocalDateTime.now());
         return ipInfo;
     }

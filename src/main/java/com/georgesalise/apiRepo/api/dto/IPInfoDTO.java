@@ -11,7 +11,6 @@ public record IPInfoDTO(
         String postal,
         String latitude,
         String longitude,
-        Boolean isCurrentIp,
         LocalDateTime createdAt
 ) {
 

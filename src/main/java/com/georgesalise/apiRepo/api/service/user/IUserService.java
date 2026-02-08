@@ -9,7 +9,7 @@ import java.util.Optional;
 public interface IUserService {
     Optional<UserDTO> getUser(Long id);
     List<UserDTO> getAllUsers();
-    String createUser(UserAuthenticationDTO userAuthenticationDTO);
+    String registerUser(UserAuthenticationDTO userAuthenticationDTO);
     String verifyUser(UserAuthenticationDTO userAuthenticationDTO);
     void deleteUser(Long id);
 }

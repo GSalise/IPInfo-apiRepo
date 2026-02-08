@@ -47,7 +47,7 @@ public class UserServiceImpl implements IUserService{
     }
 
     @Override
-    public String createUser(UserAuthenticationDTO userAuthenticationDTO) {
+    public String registerUser(UserAuthenticationDTO userAuthenticationDTO) {
         if(userAuthenticationDTO == null){
             throw new IllegalArgumentException("UserDTO cannot be null");
         }

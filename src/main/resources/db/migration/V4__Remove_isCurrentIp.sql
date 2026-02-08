@@ -1,0 +1,1 @@
+ALTER TABLE ipinfo DROP COLUMN is_current_ip;

@@ -53,11 +53,6 @@ public class IPInfo {
     @Column(name = "longitude", nullable = false)
     private String longitude;
 
-    @Setter
-    @Getter
-    @Column(name = "is_current_ip", nullable = false)
-    private Boolean isCurrentIp = false;
-
     @Getter
     @Setter
     @Column(name = "created_at")
