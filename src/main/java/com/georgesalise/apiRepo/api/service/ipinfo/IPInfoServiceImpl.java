@@ -1,0 +1,205 @@
+package com.georgesalise.apiRepo.api.service.ipinfo;
+
+import com.georgesalise.apiRepo.api.dto.IPGeoAPIDTO;
+import com.georgesalise.apiRepo.api.dto.IPInfoDTO;
+import com.georgesalise.apiRepo.api.model.IPInfo;
+import com.georgesalise.apiRepo.api.model.User;
+import com.georgesalise.apiRepo.api.repository.IIPInfoRepository;
+import com.georgesalise.apiRepo.api.repository.IUserRepository;
+import com.georgesalise.apiRepo.api.service.userhistory.IUserHistoryService;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+public class IPInfoServiceImpl implements IIPInfoService{
+    private final IIPInfoRepository iipInfoRepository;
+    private final IUserRepository userRepository;
+    private final IUserHistoryService userHistoryService;
+    private final WebClient webClient;
+
+    public IPInfoServiceImpl(IIPInfoRepository iipInfoRepository, IUserRepository userRepository, IUserHistoryService userHistoryService, WebClient webClient) {
+        this.iipInfoRepository = iipInfoRepository;
+        this.userRepository = userRepository;
+        this.userHistoryService = userHistoryService;
+        this.webClient = webClient;
+    }
+
+    @Override
+    public Optional<IPInfoDTO> getIpInfo(Long id) {
+        if(id == null){
+            throw new IllegalArgumentException("IPInfo id cannot be null");
+        }
+        return iipInfoRepository.findById(id).map(this::converToDTO);
+    }
+
+    @Override
+    public List<IPInfoDTO> getAllIpInfo() {
+        return iipInfoRepository.findAll().stream().map(this::converToDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    public IPInfoDTO createIPInfo(IPInfoDTO ipInfoDTO) {
+        if(ipInfoDTO == null){
+            throw new IllegalArgumentException("IPInfoDTO cannot be null");
+        }
+        IPInfo ipInfo = converToEntity(ipInfoDTO);
+        IPInfo saved_ipInfo = iipInfoRepository.save(ipInfo);
+        return converToDTO(saved_ipInfo);
+    }
+
+    public IPInfoDTO createIPInfo(IPGeoAPIDTO ipGeoAPIDTO) {
+        if(ipGeoAPIDTO == null){
+            throw new IllegalArgumentException("IPGeoAPIDTO cannot be null");
+        }
+        IPInfo ipInfo = converToEntity(ipGeoAPIDTO);
+        IPInfo saved_ipInfo = iipInfoRepository.save(ipInfo);
+        return converToDTO(saved_ipInfo);
+    }
+
+
+    @Override
+    public IPInfoDTO updateIpInfo(Long id, IPInfoDTO ipInfoDTO) {
+        return null;
+    }
+
+    @Override
+    public void deleteIPInfo(Long id) {
+        if (id == null){
+            throw  new IllegalArgumentException("IPInfo id cannot be null");
+        }
+        iipInfoRepository.deleteById(id);
+    }
+
+    @Override
+    public void setIsCurrentIP(Long userId, Long ipadd_id) {
+
+    }
+
+    // Method is used for getting the user's current IP information
+    @Override
+    public IPInfoDTO findIPAddress(String email) {
+        // Fetch api response
+        IPGeoAPIDTO apiResponse;
+        try {
+            apiResponse = webClient
+                    .get()
+                    .uri("/geo")
+                    .retrieve()
+                    .bodyToMono(IPGeoAPIDTO.class)
+                    .block();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        // Check if success
+        if (apiResponse == null) {
+            throw new IllegalStateException("Failed to retrieve IP information from API");
+        }
+
+        Optional<IPInfo> existingIPInfo = iipInfoRepository.findByIpAddress(apiResponse.ip());
+        IPInfoDTO result;
+
+        // Check if the IP already exists in the db
+        if(existingIPInfo.isPresent()){
+            result = converToDTO(existingIPInfo.get());
+        }else{
+            result = createIPInfo(apiResponse);
+        }
+
+        // Check if user exists, although it will always be present since the email is found in the token itself
+        // If not, then something weird is going on
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException(
+                        "User from JWT token not found: " + email + " - This should never happen!"
+                ));
+
+        // Create a history record
+        userHistoryService.createUserHistory(user.getUserId(), result.ipInfoId());
+        return result;
+    }
+
+    // Method is the same as above, but with IP Address added to fetch IP information of requested IP Address
+    @Override
+    public IPInfoDTO findIPAddress(String email, String ipAddress) {
+        IPGeoAPIDTO apiResponse;
+        try {
+            apiResponse = webClient
+                    .get()
+                    .uri("/{ipAddress}/json", ipAddress)
+                    .retrieve()
+                    .bodyToMono(IPGeoAPIDTO.class)
+                    .block();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        if (apiResponse == null) {
+            throw new IllegalStateException("Failed to retrieve IP information from API");
+        }
+
+        Optional<IPInfo> existingIPInfo = iipInfoRepository.findByIpAddress(apiResponse.ip());
+        IPInfoDTO result;
+
+        if(existingIPInfo.isPresent()){
+            result = converToDTO(existingIPInfo.get());
+        }else{
+            result = createIPInfo(apiResponse);
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException(
+                        "User from JWT token not found: " + email + " - This should never happen!"
+                ));
+
+        userHistoryService.createUserHistory(user.getUserId(), result.ipInfoId());
+        return result;
+    }
+
+    private IPInfoDTO converToDTO(IPInfo ipInfo){
+        return new IPInfoDTO(
+                ipInfo.getIpInfoId(),
+                ipInfo.getIpAddress(),
+                ipInfo.getCity(),
+                ipInfo.getRegion(),
+                ipInfo.getCountry(),
+                ipInfo.getPostal(),
+                ipInfo.getLatitude(),
+                ipInfo.getLongitude(),
+                ipInfo.getIsCurrentIp(),
+                ipInfo.getCreatedAt()
+        );
+    }
+
+    private IPInfo converToEntity(IPInfoDTO ipInfoDTO){
+        IPInfo ipInfo = new IPInfo();
+        ipInfo.setIpAddress(ipInfoDTO.ipAddress());
+        ipInfo.setCity(ipInfoDTO.city());
+        ipInfo.setRegion(ipInfoDTO.region());
+        ipInfo.setCountry(ipInfoDTO.country());
+        ipInfo.setPostal(ipInfoDTO.postal());
+        ipInfo.setLatitude(ipInfoDTO.latitude());
+        ipInfo.setLongitude(ipInfoDTO.longitude());
+        ipInfo.setIsCurrentIp(ipInfoDTO.isCurrentIp());
+        ipInfo.setCreatedAt(LocalDateTime.now());
+        return ipInfo;
+    }
+
+    private IPInfo converToEntity(IPGeoAPIDTO ipGeoAPIDTO){
+        IPInfo ipInfo = new IPInfo();
+        ipInfo.setIpAddress(ipGeoAPIDTO.ip());
+        ipInfo.setCity(ipGeoAPIDTO.city());
+        ipInfo.setRegion(ipGeoAPIDTO.region());
+        ipInfo.setCountry(ipGeoAPIDTO.country());
+        ipInfo.setPostal(ipGeoAPIDTO.postal());
+        ipInfo.setLatitude(ipGeoAPIDTO.getLatitude());
+        ipInfo.setLongitude(ipGeoAPIDTO.getLongitude());
+        ipInfo.setIsCurrentIp(true);
+        ipInfo.setCreatedAt(LocalDateTime.now());
+        return ipInfo;
+    }
+}

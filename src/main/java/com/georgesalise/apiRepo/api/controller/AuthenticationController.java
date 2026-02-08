@@ -1,8 +1,8 @@
 package com.georgesalise.apiRepo.api.controller;
 
-import com.georgesalise.apiRepo.api.dto.UserCreateDTO;
+import com.georgesalise.apiRepo.api.dto.UserAuthenticationDTO;
 import com.georgesalise.apiRepo.api.dto.UserDTO;
-import com.georgesalise.apiRepo.api.service.IUserService;
+import com.georgesalise.apiRepo.api.service.user.IUserService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,8 +18,13 @@ public class AuthenticationController {
     }
 
     @PostMapping("/register")
-    public UserDTO createNewUser(@RequestBody UserCreateDTO userCreateDTO){
-        return userService.createUser(userCreateDTO);
+    public String registerUser(@RequestBody UserAuthenticationDTO userAuthenticationDTO){
+        return userService.createUser(userAuthenticationDTO);
     }
 
+
+    @PostMapping("/login")
+    public String loginUser(@RequestBody UserAuthenticationDTO userAuthenticationDTO){
+        return userService.verifyUser(userAuthenticationDTO);
+    }
 }
