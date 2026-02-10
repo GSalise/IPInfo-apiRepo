@@ -16,10 +16,8 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(Arrays.asList(
-                "https://ipinfocheck.dcism.org",
-                "https://ipdetails.dcism.org"
-        ));
+        // If you face any CORS issues, add the correct origin here!
+        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173"));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE"));
         configuration.setAllowedHeaders(List.of("*"));
