@@ -1,10 +1,10 @@
 package com.georgesalise.apiRepo.api.controller;
 
+import com.georgesalise.apiRepo.api.dto.IPInfoDTO;
 import com.georgesalise.apiRepo.api.dto.UserHistoryDTO;
+import com.georgesalise.apiRepo.api.dto.UserHistoryWithIPInfoDTO;
 import com.georgesalise.apiRepo.api.service.userhistory.IUserHistoryService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
@@ -20,8 +20,13 @@ public class UserHistoryController {
     }
 
     @GetMapping
-    public List<UserHistoryDTO> getUserHistory(Principal principal){
+    public List<UserHistoryWithIPInfoDTO> getUserHistory(Principal principal){
         String username = principal.getName();
-        return iUserHistoryService.getUserHistory(username);
+        return iUserHistoryService.getUserHistoryAsIPInfo(username);
+    }
+
+    @DeleteMapping
+    public void deleteUserHistory(Principal principal, @RequestBody List<Long> userHistoryIds){
+        iUserHistoryService.deleteUserHistories(userHistoryIds);
     }
 }

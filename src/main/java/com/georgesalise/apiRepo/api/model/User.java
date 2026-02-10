@@ -34,6 +34,11 @@ public class User {
 
     @Setter
     @Getter
+    @Column(name = "is_active", nullable = false)
+    private boolean isActive = true;
+
+    @Setter
+    @Getter
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<UserHistory> userHistory = new ArrayList<>();
 }

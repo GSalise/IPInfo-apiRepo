@@ -28,6 +28,11 @@ public class UserHistory {
 
     @Getter
     @Setter
+    @Column(name = "is_active", nullable = false)
+    private boolean isActive = true;
+
+    @Getter
+    @Setter
     @Column(name = "accessed_at")
     private LocalDateTime accessedAt;
 

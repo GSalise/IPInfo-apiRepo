@@ -19,13 +19,13 @@ import java.util.stream.Collectors;
 
 @Service
 public class IPInfoServiceImpl implements IIPInfoService{
-    private final IIPInfoRepository iipInfoRepository;
+    private final IIPInfoRepository ipInfoRepository;
     private final IUserRepository userRepository;
     private final IUserHistoryService userHistoryService;
     private final WebClient webClient;
 
-    public IPInfoServiceImpl(IIPInfoRepository iipInfoRepository, IUserRepository userRepository, IUserHistoryService userHistoryService, WebClient webClient) {
-        this.iipInfoRepository = iipInfoRepository;
+    public IPInfoServiceImpl(IIPInfoRepository ipInfoRepository, IUserRepository userRepository, IUserHistoryService userHistoryService, WebClient webClient) {
+        this.ipInfoRepository = ipInfoRepository;
         this.userRepository = userRepository;
         this.userHistoryService = userHistoryService;
         this.webClient = webClient;
@@ -36,12 +36,12 @@ public class IPInfoServiceImpl implements IIPInfoService{
         if(id == null){
             throw new IllegalArgumentException("IPInfo id cannot be null");
         }
-        return iipInfoRepository.findById(id).map(this::converToDTO);
+        return ipInfoRepository.findById(id).map(this::converToDTO);
     }
 
     @Override
     public List<IPInfoDTO> getAllIpInfo() {
-        return iipInfoRepository.findAll().stream().map(this::converToDTO).collect(Collectors.toList());
+        return ipInfoRepository.findAll().stream().map(this::converToDTO).collect(Collectors.toList());
     }
 
     @Override
@@ -50,7 +50,7 @@ public class IPInfoServiceImpl implements IIPInfoService{
             throw new IllegalArgumentException("IPInfoDTO cannot be null");
         }
         IPInfo ipInfo = converToEntity(ipInfoDTO);
-        IPInfo saved_ipInfo = iipInfoRepository.save(ipInfo);
+        IPInfo saved_ipInfo = ipInfoRepository.save(ipInfo);
         return converToDTO(saved_ipInfo);
     }
 
@@ -59,7 +59,7 @@ public class IPInfoServiceImpl implements IIPInfoService{
             throw new IllegalArgumentException("IPGeoAPIDTO cannot be null");
         }
         IPInfo ipInfo = converToEntity(ipGeoAPIDTO);
-        IPInfo saved_ipInfo = iipInfoRepository.save(ipInfo);
+        IPInfo saved_ipInfo = ipInfoRepository.save(ipInfo);
         return converToDTO(saved_ipInfo);
     }
 
@@ -68,31 +68,35 @@ public class IPInfoServiceImpl implements IIPInfoService{
         if (id == null){
             throw  new IllegalArgumentException("IPInfo id cannot be null");
         }
-        iipInfoRepository.deleteById(id);
+        ipInfoRepository.deleteById(id);
+        IPInfo ipInfo = ipInfoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("IPInfo not found"));
+
+        if (ipInfo.isActive()) {
+            ipInfo.setActive(false);
+            ipInfoRepository.save(ipInfo);
+        }
     }
 
-    // Method is used for getting the user's current IP information
     @Override
-    public IPInfoDTO findIPAddress(String email) {
-        // Fetch api response
+    public IPInfoDTO findIPAddress(String email, String ipAddress) {
         IPGeoAPIDTO apiResponse;
         try {
             apiResponse = webClient
                     .get()
-                    .uri("/geo")
+                    .uri("/{ipAddress}/json", ipAddress)
                     .retrieve()
                     .bodyToMono(IPGeoAPIDTO.class)
                     .block();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Failed to call ipinfo.io" + e);
         }
 
-        // Check if success
         if (apiResponse == null) {
-            throw new IllegalStateException("Failed to retrieve IP information from API");
+            throw new IllegalStateException("Failed to retrieve IP information from API since it returned null");
         }
 
-        Optional<IPInfo> existingIPInfo = iipInfoRepository.findByIpAddress(apiResponse.ip());
+        Optional<IPInfo> existingIPInfo = ipInfoRepository.findByIpAddress(apiResponse.ip());
         IPInfoDTO result;
 
         // Check if the IP already exists in the db
@@ -112,44 +116,6 @@ public class IPInfoServiceImpl implements IIPInfoService{
                 ));
 
         // Create a history record
-        userHistoryService.createUserHistory(user.getUserId(), result.ipInfoId());
-        return result;
-    }
-
-    // Method is the same as above, but with IP Address added to fetch IP information of requested IP Address
-    @Override
-    public IPInfoDTO findIPAddress(String email, String ipAddress) {
-        IPGeoAPIDTO apiResponse;
-        try {
-            apiResponse = webClient
-                    .get()
-                    .uri("/{ipAddress}/json", ipAddress)
-                    .retrieve()
-                    .bodyToMono(IPGeoAPIDTO.class)
-                    .block();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        if (apiResponse == null) {
-            throw new IllegalStateException("Failed to retrieve IP information from API");
-        }
-
-        Optional<IPInfo> existingIPInfo = iipInfoRepository.findByIpAddress(apiResponse.ip());
-        IPInfoDTO result;
-
-        if(existingIPInfo.isPresent()){
-            updateIpInfo(existingIPInfo.get(), apiResponse);
-            result = converToDTO(existingIPInfo.get());
-        }else{
-            result = createIPInfo(apiResponse);
-        }
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalStateException(
-                        "User from JWT token not found: " + email + " - This should never happen!"
-                ));
-
         userHistoryService.createUserHistory(user.getUserId(), result.ipInfoId());
         return result;
     }
@@ -195,6 +161,7 @@ public class IPInfoServiceImpl implements IIPInfoService{
                 ipInfo.getPostal(),
                 ipInfo.getLatitude(),
                 ipInfo.getLongitude(),
+                ipInfo.isActive(),
                 ipInfo.getCreatedAt()
         );
     }
@@ -209,6 +176,7 @@ public class IPInfoServiceImpl implements IIPInfoService{
         ipInfo.setPostal(ipInfoDTO.postal());
         ipInfo.setLatitude(ipInfoDTO.latitude());
         ipInfo.setLongitude(ipInfoDTO.longitude());
+        ipInfo.setActive(true);
         ipInfo.setCreatedAt(LocalDateTime.now());
         return ipInfo;
     }
@@ -222,6 +190,7 @@ public class IPInfoServiceImpl implements IIPInfoService{
         ipInfo.setPostal(ipGeoAPIDTO.postal());
         ipInfo.setLatitude(ipGeoAPIDTO.getLatitude());
         ipInfo.setLongitude(ipGeoAPIDTO.getLongitude());
+        ipInfo.setActive(true);
         ipInfo.setCreatedAt(LocalDateTime.now());
         return ipInfo;
     }

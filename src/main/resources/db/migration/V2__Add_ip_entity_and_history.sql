@@ -1,5 +1,5 @@
 CREATE TABLE ipInfo (
-    ipInfo_id SERIAL PRIMARY KEY,
+    ipInfo_id INT AUTO_INCREMENT PRIMARY KEY,
     ip_address VARCHAR(15) NOT NULL UNIQUE,
     is_current_ip BOOLEAN NOT NULL DEFAULT FALSE,
     country VARCHAR(255) NOT NULL,
@@ -11,9 +11,9 @@ CREATE TABLE ipInfo (
 );
 
 CREATE TABLE user_history (
-    history_id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    ipInfo_id INTEGER NOT NULL,
+    history_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    ipInfo_id INT NOT NULL,
     accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_users FOREIGN KEY (user_id) REFERENCES users(user_id),
     CONSTRAINT fk_ipInfo FOREIGN KEY (ipInfo_id) REFERENCES ipInfo(ipInfo_id)

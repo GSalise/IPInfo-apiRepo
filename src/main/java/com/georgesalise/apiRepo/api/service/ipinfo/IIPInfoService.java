@@ -8,13 +8,15 @@ import java.util.List;
 import java.util.Optional;
 
 public interface IIPInfoService {
-    Optional<IPInfoDTO> getIpInfo(Long id);
-    List<IPInfoDTO> getAllIpInfo();
-    IPInfoDTO createIPInfo(IPInfoDTO ipInfoDTO);
-    void deleteIPInfo(Long id);
-
-
-    IPInfoDTO findIPAddress(String username);
+    // Actively used by the controller
     IPInfoDTO findIPAddress(String username, String ipAddress);
     void updateIpInfo(IPInfo ipInfo, IPGeoAPIDTO ipGeoAPIDTO);
+
+    // Being used internally
+    IPInfoDTO createIPInfo(IPInfoDTO ipInfoDTO);
+
+    // Inactive
+    Optional<IPInfoDTO> getIpInfo(Long id);
+    List<IPInfoDTO> getAllIpInfo();
+    void deleteIPInfo(Long id);
 }

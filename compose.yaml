@@ -1,9 +1,47 @@
 services:
-  postgres:
-    image: 'postgres:latest'
+  app:
+    build: .
     environment:
-      - 'POSTGRES_DB=mydatabase'
-      - 'POSTGRES_PASSWORD=secret'
-      - 'POSTGRES_USER=myuser'
+      - DB_URL=jdbc:mysql://mysql:3306/testdb
+      - DB_USERNAME=jorj
+      - DB_PASSWORD=2004george
+    depends_on:
+      mysql:
+        condition: service_healthy
     ports:
-      - '5432'
+      - "20179:20179"
+      # Make sure this port is free! Otherwise you can change this to an open port
+      # And CHANGE the port used in application.properties to match this port
+
+  mysql:
+    image: "mysql:latest"
+    environment:
+      - MYSQL_DATABASE=testdb
+      - MYSQL_ROOT_PASSWORD=myrootpassword
+      - MYSQL_USER=jorj
+      - MYSQL_PASSWORD=2004george
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+# To run this api, all you need to do is run `docker-compose up` in the terminal
+# whilst inside the root directory of this project. Upon running, the .yaml file
+# will build the Docker image for the api, and start both the api and the MySQL
+# database as separate services. The api will be accessible at http://localhost:20179
+
+# Moreover, in the details of the project submission, the contents of an .env file
+# will be provided, which contains the database credentials. Create the .env file
+# in the root directory of this project, and copy the contents provided in the details
+# of the project.
+
+# If you are unable to find the details then here they are (these aren't that critical anyways
+# since these crendentials are used for local testing):
+
+# DB_URL=jdbc:mysql://mysql:3306/testdb
+# DB_USERNAME=jorj
+# DB_PASSWORD=2004george
+

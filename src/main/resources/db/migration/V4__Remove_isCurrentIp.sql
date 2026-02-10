@@ -1,1 +1,1 @@
-ALTER TABLE ipinfo DROP COLUMN is_current_ip;
+ALTER TABLE ipInfo DROP COLUMN is_current_ip;

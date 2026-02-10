@@ -1,17 +1,19 @@
 package com.georgesalise.apiRepo.api.service.userhistory;
 
+import com.georgesalise.apiRepo.api.dto.IPInfoDTO;
 import com.georgesalise.apiRepo.api.dto.UserHistoryDTO;
+import com.georgesalise.apiRepo.api.dto.UserHistoryWithIPInfoDTO;
 import com.georgesalise.apiRepo.api.model.IPInfo;
 import com.georgesalise.apiRepo.api.model.User;
 import com.georgesalise.apiRepo.api.model.UserHistory;
 import com.georgesalise.apiRepo.api.repository.IIPInfoRepository;
 import com.georgesalise.apiRepo.api.repository.IUserHistoryRepository;
 import com.georgesalise.apiRepo.api.repository.IUserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -53,6 +55,9 @@ public class UserHistoryServiceImpl implements IUserHistoryService{
         }
 
         User user = optionalUser.get();
+
+
+
         return userHistoryRepository.findByUser(user).stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
@@ -83,6 +88,42 @@ public class UserHistoryServiceImpl implements IUserHistoryService{
     }
 
     @Override
+    public List<UserHistoryWithIPInfoDTO> getUserHistoryAsIPInfo(String email) {
+        List<UserHistoryDTO> userHistories = getUserHistory(email);
+
+        List<UserHistoryDTO> activeHistories = userHistories.stream()
+                .filter(UserHistoryDTO::isActive)
+                .toList();
+
+        List<Long> ipInfoIds = new ArrayList<>();
+        for (UserHistoryDTO history : activeHistories) {
+            ipInfoIds.add(history.ipInfoId());
+        }
+
+        List<IPInfo> ipInfos = iipInfoRepository.findAllById(ipInfoIds);
+
+        List<IPInfo> activeIpInfos = ipInfos.stream()
+                .filter(IPInfo::isActive)
+                .toList();
+
+        Map<Long, IPInfo> ipInfoMap = new HashMap<>();
+        for (IPInfo ipInfo : activeIpInfos) {
+            ipInfoMap.put(ipInfo.getIpInfoId(), ipInfo);
+        }
+
+        List<UserHistoryWithIPInfoDTO> result = new ArrayList<>();
+        for (UserHistoryDTO history : activeHistories) {
+            IPInfo matchingIpInfo = ipInfoMap.get(history.ipInfoId());
+            if (matchingIpInfo != null) {
+                UserHistoryWithIPInfoDTO dto = convertToIPInfoDTO(matchingIpInfo, history.historyId());
+                result.add(dto);
+            }
+        }
+
+        return result;
+    }
+
+    @Override
     public List<UserHistoryDTO> getAllUserHistory() {
         return userHistoryRepository.findAll().stream().map(this::convertToDTO).collect(Collectors.toList());
     }
@@ -110,19 +151,75 @@ public class UserHistoryServiceImpl implements IUserHistoryService{
         }
     }
 
-    @Override
     public void deleteUserHistory(Long id) {
-        if (id == null){
+        if (id == null) {
             throw new IllegalArgumentException("UserHistory ID cannot be null");
         }
-        userHistoryRepository.deleteById(id);
+
+        UserHistory userHistory = userHistoryRepository.findById(id)
+                .orElseThrow(() -> new IllegalStateException("UserHistory record not found for ID: " + id));
+
+        if (!userHistory.isActive()) {
+            System.out.println("UserHistory ID " + id + " is already inactive");
+            return;
+        }
+
+        userHistory.setActive(false);
+        userHistoryRepository.save(userHistory);
     }
 
+
+    @Override
+    @Transactional
+    public void deleteUserHistories(List<Long> historyIds) {
+        if (historyIds == null) {
+            throw new IllegalArgumentException("UserHistory IDs cannot be null");
+        }
+
+        if (historyIds.isEmpty()) {
+            return;
+        }
+
+        List<Long> validIds = historyIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (validIds.isEmpty()) {
+            throw new IllegalArgumentException("UserHistory IDs list contains only nulls");
+        }
+
+        List<UserHistory> histories = userHistoryRepository.findAllById(validIds);
+
+        if (histories.isEmpty()) {
+            throw new IllegalStateException("No UserHistory records found for IDs: " + validIds);
+        }
+
+        Set<Long> foundIds = new HashSet<>();
+        histories.forEach(history -> {
+            foundIds.add(history.getHistoryId());
+            history.setActive(false);
+        });
+
+        List<Long> missingIds = validIds.stream()
+                .filter(id -> !foundIds.contains(id))
+                .toList();
+
+        if (!missingIds.isEmpty()) {
+            System.out.println("Warning: UserHistory records not found for IDs: " + missingIds);
+        }
+
+        userHistoryRepository.saveAll(histories);
+    }
+
+
     private UserHistoryDTO convertToDTO(UserHistory userHistory){
-        return new UserHistoryDTO( userHistory.getHistoryId(),
-        userHistory.getUserId(),
-        userHistory.getIpInfoId(),
-        userHistory.getAccessedAt()
+        return new UserHistoryDTO(
+                userHistory.getHistoryId(),
+                userHistory.getUserId(),
+                userHistory.getIpInfoId(),
+                userHistory.isActive(),
+                userHistory.getAccessedAt()
         );
     }
 
@@ -132,8 +229,25 @@ public class UserHistoryServiceImpl implements IUserHistoryService{
                         history.getHistoryId(),
                         history.getUserId(),
                         history.getIpInfoId(),
+                        history.isActive(),
                         history.getAccessedAt()
                 ))
                 .toList();
     }
+
+    private UserHistoryWithIPInfoDTO convertToIPInfoDTO(IPInfo ipInfo, Long historyId) {
+        return new UserHistoryWithIPInfoDTO(
+                historyId,
+                ipInfo.getIpAddress(),
+                ipInfo.getCity(),
+                ipInfo.getRegion(),
+                ipInfo.getCountry(),
+                ipInfo.getPostal(),
+                ipInfo.getLatitude(),
+                ipInfo.getLongitude(),
+                ipInfo.isActive(),
+                ipInfo.getCreatedAt()
+        );
+    }
+
 }
