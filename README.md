@@ -12,7 +12,7 @@ This project is a Dockerized Spring REST API that runs together with a MySQL dat
 This repository has been setup specifically for local testing. So all you should do is run:
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 from the root directory.
