@@ -2,6 +2,7 @@ package com.georgesalise.apiRepo.api.controller;
 
 import com.georgesalise.apiRepo.api.dto.IPInfoDTO;
 import com.georgesalise.apiRepo.api.service.ipinfo.IIPInfoService;
+import com.georgesalise.apiRepo.api.util.CheckIP;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,18 +17,36 @@ public class IPInfoController {
         this.iipInfoService = iipInfoService;
     }
 
-    @PostMapping
+    @GetMapping
     public IPInfoDTO findIPInformation(Principal principal, HttpServletRequest request) {
+        if(principal == null || request == null){
+            throw new IllegalArgumentException("Principal or HTTPServletRequest cannot be null");
+        }
+
         String username = principal.getName();
         String userIP = extractClientIP(request);
-        System.out.println("Extracted IP: " + userIP);
-        return iipInfoService.findIPAddress(username, userIP);
+        System.out.println("Extracted IP: " + userIP);  // purposefully left for logging reasons
+
+        if(CheckIP.isIPValid(userIP)){
+            return iipInfoService.findIPAddress(username, userIP);
+        } else{
+            throw new IllegalArgumentException("IP address is invalid");
+        }
     }
 
-    @PostMapping("/search/{ip_address}")
+    @GetMapping("/search/{ip_address}")
     public IPInfoDTO findIPInformation(Principal principal, @PathVariable String ip_address) {
+        if(principal == null || ip_address == null){
+            throw new IllegalArgumentException("Principal or IP Address cannot be null");
+        }
+
         String username = principal.getName();
-        return iipInfoService.findIPAddress(username, ip_address);
+        if(CheckIP.isIPValid(ip_address)){
+            return iipInfoService.findIPAddress(username, ip_address);
+        } else{
+            throw new IllegalArgumentException("IP address is invalid");
+        }
+
     }
 
     private String extractClientIP(HttpServletRequest request) {
