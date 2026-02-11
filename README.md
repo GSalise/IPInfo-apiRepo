@@ -1,6 +1,9 @@
 # IP Info API
 
 This project is a Dockerized Spring REST API that runs together with a MySQL database using Docker Compose. This project is not related with ipinfo.io but it does use its services.
+<br/>
+<br/>
+You can access the live website at https://ipdetails.dcism.org/
 
 ## Requirements
 
@@ -28,6 +31,11 @@ Once running, the API will be accessible at:
 ```
 http://localhost:20179
 ```
+
+<br/>
+<br/>
+
+However if you encounter any trouble, say
 
 ## Environment Variables
 
