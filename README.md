@@ -1,24 +1,35 @@
 # IP Info API
 
 This project is a Dockerized Spring REST API that runs together with a MySQL database using Docker Compose. This project is not related with ipinfo.io but it does use its services.
+<br/>
+<br/>
+You can access the live website at https://ipdetails.dcism.org/
 
-## Requirements
+## Requirements to run
 
+- Java 17
 - Docker
 - Docker Compose
 
 ## Running the Project
 
-This repository has been setup specifically for local testing. So all you should do is run:
+This repository has been setup specifically for local testing. So, all you should do is run the following commands:
 
 ```bash
-docker compose up
+./mvnw clean package -DskipTests
+```
+
+then
+
+```bash
+docker compose up --build
 ```
 
 from the root directory.
 <br><br>
 This command will:
 
+- Build the java application
 - Build the Docker image for the API
 - Start the API service
 - Start the MySQL database service
@@ -28,6 +39,8 @@ Once running, the API will be accessible at:
 ```
 http://localhost:20179
 ```
+
+This would require you to have (at minimum) Java 17 installed in your local machine. If you have any issues, please feel free to leave an issue in my repository.
 
 ## Environment Variables
 
