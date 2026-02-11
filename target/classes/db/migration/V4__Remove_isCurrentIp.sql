@@ -1,1 +1,0 @@
-ALTER TABLE ipInfo DROP COLUMN is_current_ip;
