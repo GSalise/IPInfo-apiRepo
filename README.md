@@ -5,14 +5,21 @@ This project is a Dockerized Spring REST API that runs together with a MySQL dat
 <br/>
 You can access the live website at https://ipdetails.dcism.org/
 
-## Requirements
+## Requirements to run
 
+- Java 17
 - Docker
 - Docker Compose
 
 ## Running the Project
 
-This repository has been setup specifically for local testing. So all you should do is run:
+This repository has been setup specifically for local testing. So, all you should do is run the following commands:
+
+```bash
+./mvnw clean package -DskipTests
+```
+
+then
 
 ```bash
 docker compose up --build
@@ -22,6 +29,7 @@ from the root directory.
 <br><br>
 This command will:
 
+- Build the java application
 - Build the Docker image for the API
 - Start the API service
 - Start the MySQL database service
@@ -32,19 +40,7 @@ Once running, the API will be accessible at:
 http://localhost:20179
 ```
 
-However if you encounter any trouble, particularly with this error during `docker compose up --build`:
-
-```
-=> ERROR [3/3] COPY target/*.jar app.jar
-```
-
-That's because the .yaml file is unable to find the .jar file that already has the built project. This shouldn't be a problem normally, since I also included the `/target` directory in the repository. To solve this issue you would need to rebuild the project using the command:
-
-```
-./mvnw clean package -DskipTests
-```
-
-Although, this would require you to have (at minimum) Java 17 and Maven installed in your local machine. If you have any issues, please feel free to leave an issue in my repository.
+This would require you to have (at minimum) Java 17 installed in your local machine. If you have any issues, please feel free to leave an issue in my repository.
 
 ## Environment Variables
 
